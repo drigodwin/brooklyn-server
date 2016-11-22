@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.security.*;
 import java.util.Collection;
 import java.util.List;
 
@@ -37,6 +38,9 @@ import org.apache.http.protocol.HttpRequestHandler;
 import org.apache.http.protocol.ImmutableHttpProcessor;
 import org.apache.http.protocol.ResponseConnControl;
 import org.apache.http.protocol.ResponseContent;
+import org.apache.http.ssl.SSLContexts;
+
+import javax.net.ssl.SSLContext;
 
 public class TestHttpServer {
     private static class HandlerTuple {
@@ -52,6 +56,7 @@ public class TestHttpServer {
     private List<HttpResponseInterceptor> responseInterceptors = MutableList.of(new ResponseContent(), new ResponseConnControl());
     private int basePort = 50505;
     private Collection<HandlerTuple> handlers = MutableList.of();
+    private SSLContext sslcontext = null;
 
     public TestHttpServer interceptor(HttpResponseInterceptor interceptor) {
         checkNotStarted();
@@ -89,6 +94,14 @@ public class TestHttpServer {
         return this;
     }
 
+    /*
+     * see org.apache.brooklyn.test.framework.TestHttpCallTest for an example usage
+     */
+    public TestHttpServer addSSLCertificate(KeyStore ks, char [] keystorePassword) throws UnrecoverableKeyException, NoSuchAlgorithmException, KeyStoreException, KeyManagementException {
+        sslcontext = SSLContexts.custom().loadKeyMaterial(ks, keystorePassword).build();
+        return this;
+    }
+
     public TestHttpServer start() {
         checkNotStarted();
 
@@ -98,6 +111,10 @@ public class TestHttpServer {
             .setListenerPort(port)
             .setLocalAddress(getLocalAddress())
             .setHttpProcessor(httpProcessor);
+
+        if (sslcontext != null) {
+            bootstrap.setSslContext(sslcontext);
+        }
 
         for (HandlerTuple tuple : handlers) {
             bootstrap.registerHandler(tuple.path, tuple.handler);

@@ -19,10 +19,15 @@
 package org.apache.brooklyn.test.framework;
 
 import java.io.IOException;
+import java.security.KeyPair;
+import java.security.KeyStore;
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.security.cert.Certificate;
+import java.security.cert.X509Certificate;
 
 import org.apache.brooklyn.api.entity.EntitySpec;
 import org.apache.brooklyn.api.location.LocationSpec;
@@ -30,6 +35,8 @@ import org.apache.brooklyn.core.test.BrooklynAppUnitTestSupport;
 import org.apache.brooklyn.location.localhost.LocalhostMachineProvisioningLocation;
 import org.apache.brooklyn.test.http.TestHttpRequestHandler;
 import org.apache.brooklyn.test.http.TestHttpServer;
+import org.apache.brooklyn.util.core.crypto.FluentKeySigner;
+import org.apache.brooklyn.util.core.crypto.SecureKeys;
 import org.apache.brooklyn.util.text.Identifiers;
 import org.apache.brooklyn.util.time.Duration;
 import org.apache.http.HttpException;
@@ -46,7 +53,7 @@ import com.google.common.collect.ImmutableMap;
 
 public class TestHttpCallTest extends BrooklynAppUnitTestSupport {
 
-    private TestHttpServer server;
+    private TestHttpServer server, signedServer;
     private LocalhostMachineProvisioningLocation loc;
     private String testId;
 
@@ -71,6 +78,20 @@ public class TestHttpCallTest extends BrooklynAppUnitTestSupport {
                         .response("hello world")
                         .code(201))
                 .start();
+
+        // create a self signed certificate and ssl web server
+        KeyStore ks = SecureKeys.newKeyStore();
+        KeyPair key = SecureKeys.newKeyPair();
+        char [] ksPassword = "password".toCharArray();
+        X509Certificate cert = new FluentKeySigner("brooklyn").newCertificateFor("web-console", key);
+        ks.setKeyEntry("brooklyn", key.getPrivate(), ksPassword,
+                new Certificate[] { cert });
+        signedServer = new TestHttpServer()
+                .addSSLCertificate(ks, ksPassword)
+                .handler("/index.html", new TestHttpRequestHandler()
+                        .response("<html><body><h1>Im a H1 tag!</h1></body></html>")
+                        .code(200));
+
         loc = mgmt.getLocationManager().createLocation(LocationSpec.create(LocalhostMachineProvisioningLocation.class)
                 .configure("name", testId));
     }
@@ -82,7 +103,23 @@ public class TestHttpCallTest extends BrooklynAppUnitTestSupport {
             super.tearDown();
         } finally {
             if (server != null) server.stop();
+            if (signedServer != null) signedServer.stop();
         }
+    }
+
+    @Test(groups = "Integration")
+    public void testTrustAll(){
+        app.createAndManageChild(EntitySpec.create(TestHttpCall.class)
+                .configure(TestHttpCall.TARGET_URL, signedServer.getUrl() + "/index.html")
+                .configure(TestHttpCall.TIMEOUT, new Duration(10L, TimeUnit.SECONDS))
+                .configure(TestHttpCall.TRUST_ALL, true)
+                .configure(TestSensor.ASSERTIONS, newAssertion("contains", "Im a H1 tag!")));
+        app.createAndManageChild(EntitySpec.create(TestHttpCall.class)
+                .configure(TestHttpCall.TARGET_URL, signedServer.getUrl() + "/index.html")
+                .configure(TestHttpCall.TIMEOUT, new Duration(10L, TimeUnit.SECONDS))
+                .configure(TestHttpCall.TRUST_ALL, false)
+                .configure(TestSensor.ASSERTIONS, newAssertion("contains", "Im a H1 tag!")));
+        app.start(ImmutableList.of(loc));
     }
 
     @Test(groups = "Integration")
