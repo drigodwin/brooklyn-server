@@ -40,7 +40,7 @@
     <dependencies>
         <dependency>
             <groupId>org.glassfish.external</groupId>
-            <artifactId>opendmk_jmxremote_optional_jar</artifactId>
+            <artifactId>jmxremote_optional-repackaged</artifactId>
         </dependency>
         <dependency>
             <groupId>org.bouncycastle</groupId>

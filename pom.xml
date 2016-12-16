@@ -150,7 +150,7 @@
         <jcouchdb.version>0.11.0-1</jcouchdb.version>
         <solr.version>4.7.0</solr.version>
         <jtidy.version>r8-20060801</jtidy.version>
-        <opendmk_jmxremote_optional_jar.version>1.0-b01-ea</opendmk_jmxremote_optional_jar.version>
+        <jmxremote_optional-repackaged.version>3.1.1</jmxremote_optional-repackaged.version>
         <jopt.version>4.3</jopt.version>
         <javax-servlet.version>3.1.0</javax-servlet.version>
         <javax-servlet-jsp.version>2.0</javax-servlet-jsp.version>

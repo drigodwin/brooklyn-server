@@ -379,10 +379,10 @@
                 <artifactId>org.apache.felix.framework</artifactId>
                 <version>${felix.framework.version}</version>
             </dependency>
-            <dependency>
-                <groupId>org.glassfish.external</groupId>
-                <artifactId>opendmk_jmxremote_optional_jar</artifactId>
-                <version>${opendmk_jmxremote_optional_jar.version}</version>
+           <dependency>
+               <groupId>org.glassfish.external</groupId>
+               <artifactId>jmxremote_optional-repackaged</artifactId>
+               <version>${jmxremote_optional-repackaged.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.slf4j</groupId>
